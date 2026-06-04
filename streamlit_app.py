@@ -16,7 +16,7 @@ st.markdown("---")
 st.sidebar.header("Pengaturan")
 fp = st.sidebar.number_input("Faktor Pengenceran", value=2.0, step=0.5)
 bm_minum = st.sidebar.number_input("Baku Mutu Air Minum", value=0.3)
-bm_bersih = st.sidebar.number_input("Baku Mutu Air Bersih", value=1.0)
+bm_bersih = st.sidebar.number_input("Baku Mutu Air Bersih", value=0.3)
 bm_sungai = st.sidebar.number_input("Baku Mutu Air Sungai", value=0.3)
 
 # ==========================================================

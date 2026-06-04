@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import math
 
 # ==========================================================
@@ -129,7 +129,7 @@ ax.grid(True, linestyle=':', alpha=0.6)
 st.pyplot(fig)
 
 # ==========================================================
-# 5. PERHITUNGAN KADAR SAMPEL
+# 5. PERHITUNGAN KADAR SAMPLE
 # ==========================================================
 st.markdown("---")
 st.subheader("🔬 Hasil Perhitungan Kadar Fe Sampel")
@@ -152,7 +152,7 @@ for i in range(len(list_nama)):
     if "Minum" in kat:
         bm = bm_minum
     elif "Sungai" in kat:
-        bm = bm_sungih
+        bm = bm_sungai # Perbaikan: typo bm_sungih menjadi bm_sungai
     else:
         bm = bm_bersih
         
@@ -206,4 +206,7 @@ ax2.bar_label(rects, padding=3, fmt='%.4f')
 ax2.axhline(y=limits.mean(), color='r', linestyle='--', linewidth=1, label='Rata-rata Baku Mutu')
 ax2.set_xticks(y_pos)
 ax2.set_xticklabels(labels, rotation=15, ha='right')
-ax2.set
+ax2.set_ylabel("Konsentrasi Fe (mg/L)") # Perbaikan: command sebelumnya tidak lengkap
+ax2.set_title("Perbandingan Kadar Fe dengan Baku Mutu")
+ax2.legend()
+st.pyplot(fig2)

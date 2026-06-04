@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
 import math
 
@@ -77,9 +78,14 @@ with col2:
 st.markdown("---")
 st.subheader("📈 Hasil Regresi Linear (Kurva Kalibrasi)")
 
-#Ekstrak data dari dataframe
+# Ekstrak data dari dataframe
 x_data = df_kalibrasi['Konsentrasi (mg/L)'].values
 y_data = df_kalibrasi['Absorbansi (AU)'].values
+
+# Validasi data tidak boleh 0 semua
+if len(x_data) < 2 or len(y_data) < 2:
+    st.error("Data kalibrasi tidak cukup untuk dilakukan regresi linear.")
+    st.stop()
 
 # Menghitung Regresi (Least Squares)
 n = len(x_data)
@@ -117,7 +123,7 @@ ax.scatter(x_data, y_data, color='blue', label='Data Standar', zorder=5)
 # Plot garis regresi
 x_line = np.linspace(min(x_data), max(x_data), 100)
 y_line = slope * x_line + intercept
-ax.plot(x_line, y_line, color='red', linestyle='--', label=f'Garis Regresi (y = {slope:.4f}x + {intercept:.4f})')
+ax.plot(x_line, y_line, color='red', linestyle='--', label=f'Garis Regresi')
 
 ax.set_xlabel("Konsentrasi Fe (mg/L)")
 ax.set_ylabel("Absorbansi (AU)")
@@ -128,7 +134,7 @@ ax.grid(True, linestyle=':', alpha=0.6)
 st.pyplot(fig)
 
 # ==========================================================
-# 5. PERHITUNGAN KADAR SAMPLE
+# 5. PERHITUNGAN KADAR SAMPEL
 # ==========================================================
 st.markdown("---")
 st.subheader("🔬 Hasil Perhitungan Kadar Fe Sampel")
@@ -147,16 +153,19 @@ for i in range(len(list_nama)):
     c_aktual = c_terukur * fp_input
     
     # Tentukan Baku Mutu berdasarkan Kategori
-    kat = list_kat[i]
-    if "Minum" in kat:
+    kat = str(list_kat[i]).upper() # Mengubah menjadi uppercase untuk避免 salah eja
+    
+    if "MINUM" in kat:
         bm = bm_minum
-    elif "Sungai" in kat:
-        bm = bm_sungai # Perbaikan: typo bm_sungih menjadi bm_sungai
+    elif "SUNGAI" in kat:
+        bm = bm_sungai
     else:
+        # Default menggunakan Baku Mutu Air Bersih
         bm = bm_bersih
         
     # Status
     status = "✓ AMAN" if c_aktual <= bm else "✗ TIDAK AMAN"
+    
     # Persen
     pct = (c_aktual / bm) * 100
     
@@ -174,38 +183,4 @@ for i in range(len(list_nama)):
 df_hasil = pd.DataFrame(results)
 
 # ==========================================================
-# 6. TAMPILAN TABEL & VISUALISASI PERBANDINGAN
-# ==========================================================
-
-# Tabel Hasil dengan Pewarnaan (Styling)
-def highlight_status(val):
-    color = 'green' if 'AMAN' in str(val) else 'red'
-    return f'color: {color}; font-weight: bold'
-
-st.dataframe(
-    df_hasil.style.map(highlight_status, subset=['Status'])
-    .format({
-        "Absorbansi": "{:.3f}",
-        "Konsentrasi Terukur (mg/L)": "{:.4f}",
-        "Konsentrasi Akhir (mg/L)": "{:.4f}",
-        "Persentase Baku Mutu (%)": "{:.1f}%"
-    }),
-    use_container_width=True
-)
-
-# Visualisasi Perbandingan Bar Chart
-fig2, ax2 = plt.subplots(figsize=(10, 5))
-labels = df_hasil['Nama Sampel']
-y_pos = np.arange(len(labels))
-values = df_hasil['Konsentrasi Akhir (mg/L)']
-limits = df_hasil['Baku Mutu (mg/L)']
-
-rects = ax2.bar(y_pos, values, align='center', label='Kadar Fe (mg/L)')
-ax2.bar_label(rects, padding=3, fmt='%.4f')
-ax2.axhline(y=limits.mean(), color='r', linestyle='--', linewidth=1, label='Rata-rata Baku Mutu')
-ax2.set_xticks(y_pos)
-ax2.set_xticklabels(labels, rotation=15, ha='right')
-ax2.set_ylabel("Konsentrasi Fe (mg/L)") # Perbaikan: command sebelumnya tidak lengkap
-ax2.set_title("Perbandingan Kadar Fe dengan Baku Mutu")
-ax2.legend()
-st.pyplot(fig2)
+# 6. TAMPILAN TABEL

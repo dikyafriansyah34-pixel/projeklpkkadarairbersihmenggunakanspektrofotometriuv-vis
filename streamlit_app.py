@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as streamlit app.py
+import mount/src/projeklpkkadarairbersihmenggunakanspektrofotometriuv-vis/streamlit_app.py"
 import numpy as np
 import math
 

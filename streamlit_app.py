@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import numpy as np
 
 # ==========================================================
@@ -10,18 +8,16 @@ import numpy as np
 st.set_page_config(page_title="LPK Kadar Fe", page_icon="💧")
 
 st.title("LPK Kadar Besi (Fe)")
-st.markdown("Metode Spektrofotometri UV-Vis (Fenantrolin)")
 st.markdown("---")
 
 # ==========================================================
-# SIDEBAR - PENGATURAN
+# SIDEBAR
 # ==========================================================
 st.sidebar.header("Pengaturan")
-
 fp = st.sidebar.number_input("Faktor Pengenceran", value=2.0, step=0.5)
-bm_minum = st.sidebar.number_input("Baku Mutu Air Minum (mg/L)", value=0.3)
-bm_bersih = st.sidebar.number_input("Baku Mutu Air Bersih (mg/L)", value=1.0)
-bm_sungai = st.sidebar.number_input("Baku Mutu Air Sungai (mg/L)", value=0.3)
+bm_minum = st.sidebar.number_input("Baku Mutu Air Minum", value=0.3)
+bm_bersih = st.sidebar.number_input("Baku Mutu Air Bersih", value=1.0)
+bm_sungai = st.sidebar.number_input("Baku Mutu Air Sungai", value=0.3)
 
 # ==========================================================
 # DATA KURVA KALIBRASI
@@ -60,39 +56,7 @@ r2 = r ** 2
 col1, col2, col3 = st.columns(3)
 col1.metric("Slope", f"{m:.4f}")
 col2.metric("Intercept", f"{b:.4f}")
-col3.metric("R²", f"{r2:.5f}")
-
-# ==========================================================
-# GRAFIK KURVA KALIBRASI (PLOTLY)
-# ==========================================================
-fig = go.Figure()
-
-# Titik data
-fig.add_trace(go.Scatter(
-    x=x, y=y,
-    mode="markers",
-    name="Data Standar",
-    marker=dict(size=12, color="blue")
-))
-
-# Garis regresi
-x_line = np.linspace(0, max(x)*1.1, 100)
-y_line = m * x_line + b
-fig.add_trace(go.Scatter(
-    x=x_line, y=y_line,
-    mode="lines",
-    name=f"y = {m:.4f}x + {b:.4f}",
-    line=dict(color="red", dash="dash")
-))
-
-fig.update_layout(
-    title="Kurva Kalibrasi Kadar Fe",
-    xaxis_title="Konsentrasi (mg/L)",
-    yaxis_title="Absorbansi (AU)",
-    template="plotly_white"
-)
-
-st.plotly_chart(fig, use_container_width=True)
+col3.metric("R2", f"{r2:.5f}")
 
 # ==========================================================
 # DATA SAMPEL
@@ -121,11 +85,9 @@ for i in range(len(df_samp)):
     absorb = df_samp.loc[i, "Absorbansi"]
     kat = df_samp.loc[i, "Kategori"]
     
-    # Hitung kadar
     c_ter = (absorb - b) / m
     c_akt = c_ter * fp
     
-    # Baku mutu
     if "Minum" in kat:
         bm = bm_minum
     elif "Sungai" in kat:
@@ -133,7 +95,6 @@ for i in range(len(df_samp)):
     else:
         bm = bm_bersih
     
-    # Status
     if c_akt <= bm:
         status = "AMAN"
     else:
@@ -148,51 +109,15 @@ for i in range(len(df_samp)):
     })
 
 df_hasil = pd.DataFrame(hasil)
-
-# Tampilkan tabel
 st.dataframe(df_hasil, use_container_width=True)
-
-# ==========================================================
-# GRAFIK PERBANDINGAN (PLOTLY)
-# ==========================================================
-fig2 = go.Figure()
-
-fig2.add_trace(go.Bar(
-    name="Kadar Fe",
-    x=df_hasil["Nama"],
-    y=df_hasil["Kadar (mg/L)"],
-    marker_color="steelblue",
-    text=df_hasil["Kadar (mg/L)"],
-    textposition="auto"
-))
-
-fig2.add_trace(go.Bar(
-    name="Baku Mutu",
-    x=df_hasil["Nama"],
-    y=df_hasil["Baku Mutu"],
-    marker_color="red",
-    text=df_hasil["Baku Mutu"],
-    textposition="auto"
-))
-
-fig2.update_layout(
-    title="Perbandingan Kadar Fe dengan Baku Mutu",
-    barmode="group",
-    xaxis_title="Nama Sampel",
-    yaxis_title="Kadar Fe (mg/L)",
-    template="plotly_white"
-)
-
-st.plotly_chart(fig2, use_container_width=True)
 
 # ==========================================================
 # KESIMPULAN
 # ==========================================================
-st.markdown("---")
 st.subheader("Kesimpulan")
 
 for _, row in df_hasil.iterrows():
     if row["Status"] == "AMAN":
-        st.success(f"✓ {row['Nama']}: AMAN ({row['Kadar (mg/L)']:.4f} mg/L ≤ {row['Baku Mutu']} mg/L)")
+        st.success(f"AMAN - {row['Nama']}: {row['Kadar (mg/L)']} mg/L")
     else:
-        st.error(f"✗ {row['Nama']}: TIDAK AMAN ({row['Kadar (mg/L)']:.4f} mg/L > {row['Baku Mutu']} mg/L)")
+        st.error(f"TIDAK AMAN - {row['Nama']}: {row['Kadar (mg/L)']} mg/L")

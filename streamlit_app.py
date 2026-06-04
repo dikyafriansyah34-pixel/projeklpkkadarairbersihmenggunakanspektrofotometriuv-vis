@@ -1,186 +1,198 @@
 import streamlit as st
 import pandas as pd
-mount/src/projeklpkkadarairbersihmenggunakanspektrofotometriuv-vis/streamlit_app.py"
+import plotly.express as px
+import plotly.graph_objects as go
 import numpy as np
-import math
 
 # ==========================================================
-# KONFIGURASI HALAMAN
+# KONFIGURASI
 # ==========================================================
-st.set_page_config(
-    page_title="LPK - Kadar Fe (UV-Vis)",
-    page_icon="🧪",
-    layout="wide"
-)
+st.set_page_config(page_title="LPK Kadar Fe", page_icon="💧")
 
-# ==========================================================
-# 1. SIDEBAR - PENGATURAN & BAKU MUTU
-# ==========================================================
-st.sidebar.header("⚙️ Pengaturan & Baku Mutu")
-
-# Input Parameter Analisis
-st.sidebar.subheader("Parameter Analisis")
-fp_input = st.sidebar.number_input("Faktor Pengenceran (x)", min_value=1.0, value=2.0, step=0.5)
-vol_sampel = st.sidebar.number_input("Volume Sampel Diambil (mL)", min_value=1.0, value=50.0)
-
-# Input Baku Mutu
-st.sidebar.subheader("Baku Mutu (mg/L)")
-bm_minum = st.sidebar.number_input("Air Minum (PerMenKes 492/2010)", value=0.3)
-bm_bersih = st.sidebar.number_input("Air Bersih", value=1.0)
-bm_sungai = st.sidebar.number_input("Air Sungai Kelas I (PP 22/2021)", value=0.3)
-
-# ==========================================================
-# 2. MAIN AREA - INPUT DATA
-# ==========================================================
-st.title("🧪 LPK : Perhitungan Kadar Fe (Metode Fenantrolin)")
+st.title("LPK Kadar Besi (Fe)")
+st.markdown("Metode Spektrofotometri UV-Vis (Fenantrolin)")
 st.markdown("---")
 
-# Kolom Input Data
-col1, col2 = st.columns(2)
+# ==========================================================
+# SIDEBAR - PENGATURAN
+# ==========================================================
+st.sidebar.header("Pengaturan")
 
-with col1:
-    st.subheader("📊 Data Kurva Kalibrasi")
-    # Data Default
-    data_kalibrasi = pd.DataFrame({
-        'Konsentrasi (mg/L)': [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-        'Absorbansi (AU)': [0.000, 0.085, 0.172, 0.258, 0.341, 0.430]
-    })
-    
-    # Editor Tabel Kalibrasi
-    df_kalibrasi = st.data_editor(
-        data_kalibrasi,
-        num_rows="dynamic",
-        key="kalibrasi_editor",
-        use_container_width=True,
-        help="Edit data kurva kalibrasi standar di sini."
-    )
-
-with col2:
-    st.subheader("💧 Data Sampel Uji")
-    # Data Default Sampel
-    data_sampel = pd.DataFrame({
-        'Nama Sampel': ['Sampel A (Air Sumur)', 'Sampel B (Air Sungai)', 'Sampel C (Air PDAM)'],
-        'Absorbansi (AU)': [0.215, 0.318, 0.042],
-        'Kategori Baku Mutu': ['Air Bersih', 'Air Sungai', 'Air Minum']
-    })
-    
-    # Editor Tabel Sampel
-    df_sampel = st.data_editor(
-        data_sampel,
-        num_rows="dynamic",
-        key="sampel_editor",
-        use_container_width=True
-    )
+fp = st.sidebar.number_input("Faktor Pengenceran", value=2.0, step=0.5)
+bm_minum = st.sidebar.number_input("Baku Mutu Air Minum (mg/L)", value=0.3)
+bm_bersih = st.sidebar.number_input("Baku Mutu Air Bersih (mg/L)", value=1.0)
+bm_sungai = st.sidebar.number_input("Baku Mutu Air Sungai (mg/L)", value=0.3)
 
 # ==========================================================
-# 3. PERHITUNGAN REGRESI LINEAR
+# DATA KURVA KALIBRASI
 # ==========================================================
-st.markdown("---")
-st.subheader("📈 Hasil Regresi Linear (Kurva Kalibrasi)")
+st.subheader("Data Kurva Kalibrasi")
 
-# Ekstrak data dari dataframe
-x_data = df_kalibrasi['Konsentrasi (mg/L)'].values
-y_data = df_kalibrasi['Absorbansi (AU)'].values
+kalibrasi = pd.DataFrame({
+    "Konsentrasi (mg/L)": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+    "Absorbansi (AU)": [0.000, 0.085, 0.172, 0.258, 0.341, 0.430]
+})
 
-# Validasi data tidak boleh 0 semua
-if len(x_data) < 2 or len(y_data) < 2:
-    st.error("Data kalibrasi tidak cukup untuk dilakukan regresi linear.")
-    st.stop()
+df_kal = st.data_editor(kalibrasi, num_rows="dynamic", key="kal")
 
-# Menghitung Regresi (Least Squares)
-n = len(x_data)
-sum_x = np.sum(x_data)
-sum_y = np.sum(y_data)
-sum_xy = np.sum(x_data * y_data)
-sum_x2 = np.sum(x_data ** 2)
+# ==========================================================
+# REGRESI LINEAR
+# ==========================================================
+x = df_kal["Konsentrasi (mg/L)"].values
+y = df_kal["Absorbansi (AU)"].values
 
-# Slope (m) dan Intercept (b)
-if (n * sum_x2 - sum_x ** 2) != 0:
-    slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2)
-    intercept = (sum_y - slope * sum_x) / n
-else:
-    st.error("Terjadi kesalahan perhitungan: Pembagian dengan nol (Data tidak valid).")
-    st.stop()
+n = len(x)
+sum_x = np.sum(x)
+sum_y = np.sum(y)
+sum_xy = np.sum(x * y)
+sum_x2 = np.sum(x ** 2)
 
-# Hitung R-squared
+m = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2)
+b = (sum_y - m * sum_x) / n
+
 mean_x = sum_x / n
 mean_y = sum_y / n
-num = np.sum((x_data - mean_x) * (y_data - mean_y))
-den = np.sqrt(np.sum((x_data - mean_x)**2) * np.sum((y_data - mean_y)**2))
-R = num / den
-R2 = R ** 2
+num = np.sum((x - mean_x) * (y - mean_y))
+den = np.sqrt(np.sum((x - mean_x)**2) * np.sum((y - mean_y)**2))
+r = num / den if den != 0 else 0
+r2 = r ** 2
 
-# Tampilkan Persamaan
-st.info(f"**Persamaan Regresi:** y = {slope:.4f}x + {intercept:.4f}")
-st.success(f"**R² (Koefisien Determinasi):** {R2:.5f}")
-
-# ==========================================================
-# 4. PLOT VISUALISASI KURVA KALIBRASI
-# ==========================================================
-fig, ax = plt.subplots()
-# Plot titik data aktual
-ax.scatter(x_data, y_data, color='blue', label='Data Standar', zorder=5)
-# Plot garis regresi
-x_line = np.linspace(min(x_data), max(x_data), 100)
-y_line = slope * x_line + intercept
-ax.plot(x_line, y_line, color='red', linestyle='--', label=f'Garis Regresi')
-
-ax.set_xlabel("Konsentrasi Fe (mg/L)")
-ax.set_ylabel("Absorbansi (AU)")
-ax.set_title("Grafik Kurva Kalibrasi")
-ax.legend()
-ax.grid(True, linestyle=':', alpha=0.6)
-
-st.pyplot(fig)
+col1, col2, col3 = st.columns(3)
+col1.metric("Slope", f"{m:.4f}")
+col2.metric("Intercept", f"{b:.4f}")
+col3.metric("R²", f"{r2:.5f}")
 
 # ==========================================================
-# 5. PERHITUNGAN KADAR SAMPEL
+# GRAFIK KURVA KALIBRASI (PLOTLY)
+# ==========================================================
+fig = go.Figure()
+
+# Titik data
+fig.add_trace(go.Scatter(
+    x=x, y=y,
+    mode="markers",
+    name="Data Standar",
+    marker=dict(size=12, color="blue")
+))
+
+# Garis regresi
+x_line = np.linspace(0, max(x)*1.1, 100)
+y_line = m * x_line + b
+fig.add_trace(go.Scatter(
+    x=x_line, y=y_line,
+    mode="lines",
+    name=f"y = {m:.4f}x + {b:.4f}",
+    line=dict(color="red", dash="dash")
+))
+
+fig.update_layout(
+    title="Kurva Kalibrasi Kadar Fe",
+    xaxis_title="Konsentrasi (mg/L)",
+    yaxis_title="Absorbansi (AU)",
+    template="plotly_white"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# ==========================================================
+# DATA SAMPEL
 # ==========================================================
 st.markdown("---")
-st.subheader("🔬 Hasil Perhitungan Kadar Fe Sampel")
+st.subheader("Data Sampel")
 
-# Proses Hitung
-list_nama = df_sampel['Nama Sampel'].values
-list_abs = df_sampel['Absorbansi (AU)'].values
-list_kat = df_sampel['Kategori Baku Mutu'].values
+sampel = pd.DataFrame({
+    "Nama Sampel": ["Air Sumur", "Air Sungai", "Air PDAM"],
+    "Absorbansi": [0.215, 0.318, 0.042],
+    "Kategori": ["Air Bersih", "Air Sungai", "Air Minum"]
+})
 
-results = []
+df_samp = st.data_editor(sampel, num_rows="dynamic", key="samp")
 
-for i in range(len(list_nama)):
-    A = list_abs[i]
-    # Menghitung Konsentrasi
-    c_terukur = (A - intercept) / slope
-    c_aktual = c_terukur * fp_input
+# ==========================================================
+# HASIL PERHITUNGAN
+# ==========================================================
+st.markdown("---")
+st.subheader("Hasil Perhitungan")
+
+hasil = []
+
+for i in range(len(df_samp)):
+    nama = df_samp.loc[i, "Nama Sampel"]
+    absorb = df_samp.loc[i, "Absorbansi"]
+    kat = df_samp.loc[i, "Kategori"]
     
-    # Tentukan Baku Mutu berdasarkan Kategori
-    kat = str(list_kat[i]).upper() # Mengubah menjadi uppercase untuk避免 salah eja
+    # Hitung kadar
+    c_ter = (absorb - b) / m
+    c_akt = c_ter * fp
     
-    if "MINUM" in kat:
+    # Baku mutu
+    if "Minum" in kat:
         bm = bm_minum
-    elif "SUNGAI" in kat:
+    elif "Sungai" in kat:
         bm = bm_sungai
     else:
-        # Default menggunakan Baku Mutu Air Bersih
         bm = bm_bersih
-        
+    
     # Status
-    status = "✓ AMAN" if c_aktual <= bm else "✗ TIDAK AMAN"
+    if c_akt <= bm:
+        status = "AMAN"
+    else:
+        status = "TIDAK AMAN"
     
-    # Persen
-    pct = (c_aktual / bm) * 100
-    
-    results.append({
-        "Nama Sampel": list_nama[i],
-        "Absorbansi": A,
-        "Konsentrasi Terukur (mg/L)": c_terukur,
-        "Konsentrasi Akhir (mg/L)": round(c_aktual, 4),
-        "Baku Mutu (mg/L)": bm,
-        "Persentase Baku Mutu (%)": round(pct, 2),
+    hasil.append({
+        "Nama": nama,
+        "Absorbansi": absorb,
+        "Kadar (mg/L)": round(c_akt, 4),
+        "Baku Mutu": bm,
         "Status": status
     })
 
-# Membuat DataFrame Hasil
-df_hasil = pd.DataFrame(results)
+df_hasil = pd.DataFrame(hasil)
+
+# Tampilkan tabel
+st.dataframe(df_hasil, use_container_width=True)
 
 # ==========================================================
-# 6. TAMPILAN TABEL
+# GRAFIK PERBANDINGAN (PLOTLY)
+# ==========================================================
+fig2 = go.Figure()
+
+fig2.add_trace(go.Bar(
+    name="Kadar Fe",
+    x=df_hasil["Nama"],
+    y=df_hasil["Kadar (mg/L)"],
+    marker_color="steelblue",
+    text=df_hasil["Kadar (mg/L)"],
+    textposition="auto"
+))
+
+fig2.add_trace(go.Bar(
+    name="Baku Mutu",
+    x=df_hasil["Nama"],
+    y=df_hasil["Baku Mutu"],
+    marker_color="red",
+    text=df_hasil["Baku Mutu"],
+    textposition="auto"
+))
+
+fig2.update_layout(
+    title="Perbandingan Kadar Fe dengan Baku Mutu",
+    barmode="group",
+    xaxis_title="Nama Sampel",
+    yaxis_title="Kadar Fe (mg/L)",
+    template="plotly_white"
+)
+
+st.plotly_chart(fig2, use_container_width=True)
+
+# ==========================================================
+# KESIMPULAN
+# ==========================================================
+st.markdown("---")
+st.subheader("Kesimpulan")
+
+for _, row in df_hasil.iterrows():
+    if row["Status"] == "AMAN":
+        st.success(f"✓ {row['Nama']}: AMAN ({row['Kadar (mg/L)']:.4f} mg/L ≤ {row['Baku Mutu']} mg/L)")
+    else:
+        st.error(f"✗ {row['Nama']}: TIDAK AMAN ({row['Kadar (mg/L)']:.4f} mg/L > {row['Baku Mutu']} mg/L)")
